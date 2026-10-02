@@ -1,0 +1,69 @@
+/* Tokens de diseño (FRONTEND.md §8), tomados del prototipo. */
+:root {
+  --bg: #f2f5f6;
+  --surface: #ffffff;
+  --surface-2: #f7f9fa;
+  --ink: #14252c;
+  --muted: #5a6c73;
+  --line: #d6dfe2;
+  --accent: #0e6b71;
+  --accent-soft: #dbeeee;
+  --accent-ink: #ffffff;
+  --good: #2c7a4c;
+  --good-soft: #e1f0e6;
+  --warn: #9c620a;
+  --warn-soft: #fbeed6;
+  --crit: #ad3636;
+  --crit-soft: #f8e1e1;
+  --info: #365ca3;
+  --info-soft: #e2e9f6;
+  --font-display: 'Bricolage Grotesque', system-ui, sans-serif;
+  --font-body: 'Public Sans', system-ui, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, monospace; /* horas, documentos, signos vitales */
+  color-scheme: light;
+}
+
+/* Tema oscuro: los mismos tokens redefinidos. Sigue al sistema salvo que se elija a mano. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --bg: #0f191d;
+    --surface: #16242a;
+    --surface-2: #1c2d34;
+    --ink: #e4eef0;
+    --muted: #9db0b6;
+    --line: #2d4149;
+    --accent: #5cc3c8;
+    --accent-soft: #173d40;
+    --accent-ink: #0b1b1e;
+    --good: #6cc592;
+    --good-soft: #173526;
+    --warn: #e6b05a;
+    --warn-soft: #3a2c12;
+    --crit: #f08a8a;
+    --crit-soft: #401d1d;
+    --info: #8fb0ee;
+    --info-soft: #1b2a45;
+    color-scheme: dark;
+  }
+}
+
+:root[data-theme='dark'] {
+  --bg: #0f191d;
+  --surface: #16242a;
+  --surface-2: #1c2d34;
+  --ink: #e4eef0;
+  --muted: #9db0b6;
+  --line: #2d4149;
+  --accent: #5cc3c8;
+  --accent-soft: #173d40;
+  --accent-ink: #0b1b1e;
+  --good: #6cc592;
+  --good-soft: #173526;
+  --warn: #e6b05a;
+  --warn-soft: #3a2c12;
+  --crit: #f08a8a;
+  --crit-soft: #401d1d;
+  --info: #8fb0ee;
+  --info-soft: #1b2a45;
+  color-scheme: dark;
+}
