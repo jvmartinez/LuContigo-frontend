@@ -35,7 +35,7 @@ const ENTIDAD: Record<string, string> = {
 const TAMANO = 50;
 
 interface Filtros {
-  pacienteId: string;
+  documento: string;
   usuarioId: string;
   desde: string;
 }
@@ -43,10 +43,10 @@ interface Filtros {
 /** Bitácora de accesos al expediente (RF-20): quién vio o modificó cada historial. */
 export default function BitacoraPage() {
   const { zona } = useUsuario();
-  const [filtros, setFiltros] = useState<Filtros>({ pacienteId: '', usuarioId: '', desde: '' });
+  const [filtros, setFiltros] = useState<Filtros>({ documento: '', usuarioId: '', desde: '' });
   const [page, setPage] = useState(1);
   const bitacora = useAuditoria({
-    pacienteId: filtros.pacienteId || undefined,
+    documento: filtros.documento || undefined,
     usuarioId: filtros.usuarioId || undefined,
     desde: filtros.desde
       ? isoConZona(instanteLocal(filtros.desde, '00:00', zona), zona)
@@ -69,15 +69,15 @@ export default function BitacoraPage() {
         className="mb-4 grid gap-3 rounded-xl border border-line bg-surface p-4 sm:grid-cols-[1fr_1fr_180px_auto]"
         onSubmit={handleSubmit((f) => {
           setFiltros({
-            pacienteId: f.pacienteId.trim(),
+            documento: f.documento.trim(),
             usuarioId: f.usuarioId.trim(),
             desde: f.desde,
           });
           setPage(1);
         })}
       >
-        <Campo etiqueta="ID de paciente" opcional>
-          <Input className="font-mono" placeholder="pac_…" {...register('pacienteId')} />
+        <Campo etiqueta="Documento del paciente" opcional>
+          <Input className="font-mono" minLength={3} maxLength={30} {...register('documento')} />
         </Campo>
         <Campo etiqueta="ID de usuario" opcional>
           <Input className="font-mono" placeholder="usu_…" {...register('usuarioId')} />
@@ -93,8 +93,8 @@ export default function BitacoraPage() {
             type="button"
             variante="fantasma"
             onClick={() => {
-              reset({ pacienteId: '', usuarioId: '', desde: '' });
-              setFiltros({ pacienteId: '', usuarioId: '', desde: '' });
+              reset({ documento: '', usuarioId: '', desde: '' });
+              setFiltros({ documento: '', usuarioId: '', desde: '' });
               setPage(1);
             }}
           >
@@ -117,7 +117,7 @@ export default function BitacoraPage() {
                 <TableHead>Fecha</TableHead>
                 <TableHead>Acción</TableHead>
                 <TableHead>Recurso</TableHead>
-                <TableHead>Paciente</TableHead>
+                <TableHead>Documento del paciente</TableHead>
                 <TableHead>Usuario</TableHead>
                 <TableHead>IP</TableHead>
               </TableRow>
@@ -139,7 +139,7 @@ export default function BitacoraPage() {
                         <span className="block font-mono text-xs text-muted">{r.entidadId}</span>
                       )}
                     </TableCell>
-                    <TableCell className="font-mono text-xs">{r.pacienteId ?? '—'}</TableCell>
+                    <TableCell className="font-mono text-xs">{r.documento ?? '—'}</TableCell>
                     <TableCell className="font-mono text-xs">
                       {r.usuarioId ?? 'Enlace público'}
                     </TableCell>

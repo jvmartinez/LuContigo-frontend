@@ -30,7 +30,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Email y contraseña → access token + refresh token */
+        /**
+         * Inicia sesión con email y contraseña
+         * @description Devuelve el access token y su vencimiento. En web, el refresh token se guarda en una cookie httpOnly; con `X-Cliente: mobile`, ambos tokens se devuelven en el cuerpo.
+         */
         post: operations["AuthController_login"];
         delete?: never;
         options?: never;
@@ -47,7 +50,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Nuevo access token (rota el refresh token) */
+        /**
+         * Renueva los tokens de acceso
+         * @description Rota el refresh token. La web lo envía mediante cookie; la app móvil debe enviarlo en `refreshToken`.
+         */
         post: operations["AuthController_refresh"];
         delete?: never;
         options?: never;
@@ -64,7 +70,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Revoca el refresh token */
+        /**
+         * Cierra sesión y revoca el refresh token
+         * @description La web usa la cookie de refresh; la app móvil envía `refreshToken` en el cuerpo.
+         */
         post: operations["AuthController_logout"];
         delete?: never;
         options?: never;
@@ -184,6 +193,7 @@ export interface paths {
         /** Especialidades y duración por defecto de la cita */
         get: operations["ClinicasController_especialidades"];
         put?: never;
+        /** Crea una especialidad para la clínica */
         post: operations["ClinicasController_crearEspecialidad"];
         delete?: never;
         options?: never;
@@ -204,6 +214,7 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
+        /** Actualiza una especialidad */
         patch: operations["ClinicasController_actualizarEspecialidad"];
         trace?: never;
     };
@@ -214,8 +225,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** Lista los consultorios y sus especialidades */
         get: operations["ClinicasController_consultorios"];
         put?: never;
+        /** Crea un consultorio */
         post: operations["ClinicasController_crearConsultorio"];
         delete?: never;
         options?: never;
@@ -236,6 +249,7 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
+        /** Actualiza un consultorio */
         patch: operations["ClinicasController_actualizarConsultorio"];
         trace?: never;
     };
@@ -790,7 +804,7 @@ export interface operations {
     AuditoriaController_listar: {
         parameters: {
             query?: {
-                pacienteId?: string;
+                documento?: string;
                 usuarioId?: string;
                 desde?: string;
                 page?: number;
@@ -806,7 +820,26 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": {
+                        items: {
+                            id: string;
+                            usuarioId: string | null;
+                            accion: string;
+                            entidad: string;
+                            entidadId: string | null;
+                            pacienteId: string | null;
+                            /** @description Número de documento del paciente; null si no hay paciente asociado. */
+                            documento: string | null;
+                            ip: string | null;
+                            /** Format: date-time */
+                            fecha: string;
+                        }[];
+                        page: number;
+                        pageSize: number;
+                        total: number;
+                    };
+                };
             };
         };
     };

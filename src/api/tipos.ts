@@ -355,6 +355,7 @@ export interface Indicadores {
 export interface RegistroAuditoria {
   id: string;
   usuarioId: string | null;
+  documento: string | null;
   accion: string;
   entidad: string;
   entidadId: string | null;

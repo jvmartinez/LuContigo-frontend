@@ -198,7 +198,7 @@ export function useIndicadores(desde: string, hasta: string) {
 }
 
 export interface FiltroAuditoria {
-  pacienteId?: string;
+  documento?: string;
   usuarioId?: string;
   desde?: string;
   page: number;

@@ -1249,12 +1249,18 @@ export const handlers = [
       const pageSize = Number(p.get('pageSize') ?? 20);
       const lista = db.auditoria.filter(
         (a) =>
-          (!p.get('pacienteId') || a.pacienteId === p.get('pacienteId')) &&
+          (!p.get('documento') ||
+            db.pacientes.some(
+              (paciente) => paciente.id === a.pacienteId && paciente.documento === p.get('documento'),
+            )) &&
           (!p.get('usuarioId') || a.usuarioId === p.get('usuarioId')) &&
           (!p.get('desde') || a.fecha >= new Date(p.get('desde')!).toISOString()),
       );
       return HttpResponse.json({
-        items: lista.slice((page - 1) * pageSize, page * pageSize),
+        items: lista.slice((page - 1) * pageSize, page * pageSize).map((registro) => ({
+          ...registro,
+          documento: db.pacientes.find((paciente) => paciente.id === registro.pacienteId)?.documento ?? null,
+        })),
         page,
         pageSize,
         total: lista.length,
