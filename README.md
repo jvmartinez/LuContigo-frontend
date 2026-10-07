@@ -1,6 +1,6 @@
 # MediCita · Web
 
-Aplicación web de MediCita (React 18 · Vite 5 · TypeScript estricto · TanStack Query · Tailwind + Radix).
+Aplicación web de MediCita (React 18 · Vite 8 · TypeScript estricto · TanStack Query · Tailwind + Radix).
 Implementa `FRONTEND.md`: una sola SPA responsiva, en español, con vistas para recepción, enfermería,
 médicos, administración y el portal del paciente. Consume solo la API de `LuContigo-backend`.
 

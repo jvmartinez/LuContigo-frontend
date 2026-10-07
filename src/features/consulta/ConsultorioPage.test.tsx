@@ -1,11 +1,81 @@
 import { screen, waitFor, within } from '@testing-library/react';
+import { delay, http, HttpResponse } from 'msw';
+import { API_URL } from '@/api/client';
 import { db } from '@/test/mocks/handlers';
+import { servidor } from '@/test/mocks/servidor';
 import { EMAILS, renderApp } from '@/test/utils';
 
 const citaEnConsulta = () =>
   db.citas.find((c) => c.pacienteId === 'pac_01' && c.estado === 'EN_CONSULTA')!;
 
 describe('consulta del médico', () => {
+  it('distingue un error del historial de la ausencia confirmada de signos y permite reintentar', async () => {
+    const cita = citaEnConsulta();
+    let intentos = 0;
+    servidor.use(
+      http.get(`${API_URL}/pacientes/:id/historial`, async () => {
+        intentos++;
+        if (intentos === 1) return HttpResponse.json({ error: 'fallo temporal' }, { status: 503 });
+        await delay(100);
+        return HttpResponse.json({
+          pacienteId: cita.pacienteId,
+          paciente: db.pacientes.find((p) => p.id === cita.pacienteId),
+          eventos: [
+            {
+              citaId: cita.id,
+              fecha: cita.inicio,
+              estado: cita.estado,
+              medico: {
+                id: cita.medicoId,
+                nombre: 'Dra. Ana Torres',
+                especialidad: 'Medicina general',
+              },
+              signosVitales: db.signos[cita.id],
+              consulta: null,
+              tareas: [],
+            },
+          ],
+        });
+      }),
+    );
+
+    const { usuario } = renderApp(`/consultorio/${cita.id}`, { como: EMAILS.medico });
+    const errorSignos = await screen.findByText('No pudimos cargar los signos de esta cita');
+    expect(errorSignos.closest('[role="alert"]')).not.toBeNull();
+    expect(
+      screen.queryByText('No se registraron signos vitales en esta cita.'),
+    ).not.toBeInTheDocument();
+
+    await usuario.click(
+      within(errorSignos.closest('[role="alert"]')!).getByRole('button', { name: 'Reintentar' }),
+    );
+
+    expect(await screen.findByText('Cargando signos vitales…')).toBeInTheDocument();
+    expect(await screen.findByText('145/92')).toBeInTheDocument();
+    expect(screen.queryByText('No pudimos cargar los signos de esta cita')).not.toBeInTheDocument();
+    expect(intentos).toBe(2);
+  });
+
+  it('reserva el mensaje de ausencia de signos para una consulta exitosa', async () => {
+    const cita = citaEnConsulta();
+    servidor.use(
+      http.get(`${API_URL}/pacientes/:id/historial`, () =>
+        HttpResponse.json({
+          pacienteId: cita.pacienteId,
+          paciente: db.pacientes.find((p) => p.id === cita.pacienteId),
+          eventos: [],
+        }),
+      ),
+    );
+
+    renderApp(`/consultorio/${cita.id}`, { como: EMAILS.medico });
+
+    expect(
+      await screen.findByText('No se registraron signos vitales en esta cita.'),
+    ).toBeInTheDocument();
+    expect(screen.queryByText('No pudimos cargar los signos de esta cita')).not.toBeInTheDocument();
+  });
+
   it('abre por defecto la cita EN_CONSULTA con alergias, signos de hoy e historial', async () => {
     renderApp('/consultorio', { como: EMAILS.medico });
     expect(

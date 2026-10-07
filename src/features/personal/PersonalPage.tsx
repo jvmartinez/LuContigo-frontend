@@ -29,7 +29,13 @@ import type { Rol } from '@/shared/enums';
 import { resumirHorario } from './horario';
 import { NuevoPersonalDialog } from './NuevoPersonalDialog';
 
-type Fila = MiembroPersonal & { horario: string | null };
+type Fila = MiembroPersonal & {
+  horario: string | null;
+  horarioPendiente: boolean;
+  errorHorario: boolean;
+  horarioReintentando: boolean;
+  reintentarHorario: () => void;
+};
 const col = createColumnHelper<Fila>();
 
 const columnas = [
@@ -54,7 +60,32 @@ const columnas = [
   col.accessor('horario', {
     header: 'Horario',
     enableSorting: false,
-    cell: (c) => <span className="text-xs">{c.getValue() ?? 'Cargando…'}</span>,
+    cell: ({ row: { original: p } }) =>
+      p.errorHorario ? (
+        <div role="alert" className="flex flex-col items-start gap-1 text-xs">
+          <span>No se pudo cargar el horario de {p.nombre}.</span>
+          <Button
+            type="button"
+            variante="enlace"
+            className="min-h-8 px-0 text-xs"
+            aria-label={
+              p.horarioReintentando
+                ? `Reintentando horario de ${p.nombre}`
+                : `Reintentar horario de ${p.nombre}`
+            }
+            cargando={p.horarioReintentando}
+            onClick={p.reintentarHorario}
+          >
+            {p.horarioReintentando ? 'Reintentando…' : 'Reintentar'}
+          </Button>
+        </div>
+      ) : p.horarioPendiente ? (
+        <span role="status" className="text-xs">
+          Cargando horario…
+        </span>
+      ) : (
+        <span className="text-xs">{p.horario ?? 'Sin horario'}</span>
+      ),
   }),
   col.accessor('activo', {
     header: 'Estado',
@@ -71,14 +102,25 @@ export default function PersonalPage() {
   const lista = useMemo(() => personal.data ?? [], [personal.data]);
 
   const horarios = useQueries({ queries: lista.map((p) => consultaHorarios(p.id)) });
+  const estadoHorarios = JSON.stringify(
+    horarios.map((h) => [h.dataUpdatedAt, h.status, h.fetchStatus]),
+  );
   const filas = useMemo<Fila[]>(
     () =>
-      lista.map((p, i) => ({
-        ...p,
-        horario: horarios[i]?.data ? resumirHorario(horarios[i].data.bloques) : null,
-      })),
+      lista.map((p, i) => {
+        const horario = horarios[i];
+        return {
+          ...p,
+          horario: horario?.data ? resumirHorario(horario.data.bloques) : null,
+          horarioPendiente: horario?.isPending ?? true,
+          errorHorario: horario?.isError ?? false,
+          horarioReintentando: horario?.isFetching ?? false,
+          reintentarHorario: () => void horario?.refetch(),
+        };
+      }),
+    // Sustituye la referencia inestable de useQueries por estados que actualizan cada fila.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [lista, JSON.stringify(horarios.map((h) => h.dataUpdatedAt))],
+    [lista, estadoHorarios],
   );
 
   const tabla = useReactTable({

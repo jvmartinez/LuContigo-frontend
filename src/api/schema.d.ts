@@ -52,7 +52,7 @@ export interface paths {
         put?: never;
         /**
          * Renueva los tokens de acceso
-         * @description Rota el refresh token. La web lo envía mediante cookie; la app móvil debe enviarlo en `refreshToken`.
+         * @description No requiere access token. Rota el refresh token: el anterior queda revocado y reutilizarlo cierra todas las sesiones. La web lo envía mediante cookie; la app móvil debe enviarlo en `refreshToken` y repetir `X-Cliente: mobile` para recibir el nuevo en el cuerpo.
          */
         post: operations["AuthController_refresh"];
         delete?: never;
@@ -72,7 +72,7 @@ export interface paths {
         put?: never;
         /**
          * Cierra sesión y revoca el refresh token
-         * @description La web usa la cookie de refresh; la app móvil envía `refreshToken` en el cuerpo.
+         * @description No requiere access token. La web usa la cookie de refresh; la app móvil envía `refreshToken` en el cuerpo y, opcionalmente, `dispositivoToken` para dejar de recibir notificaciones push en ese dispositivo. Responde 204 aunque el token no exista o ya esté revocado.
          */
         post: operations["AuthController_logout"];
         delete?: never;
@@ -159,7 +159,10 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
-        /** Elimina el token push al cerrar sesión */
+        /**
+         * Elimina un token push del usuario actual
+         * @description Alternativa a enviar `dispositivoToken` en `POST /auth/logout`. Solo borra tokens propios; responde 204 aunque el token no exista.
+         */
         delete: operations["DispositivosController_eliminar"];
         options?: never;
         head?: never;
@@ -394,6 +397,24 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/pacientes/yo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Mis datos de paciente, contacto y canal preferido */
+        get: operations["PacientesController_miPerfil"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Actualiza mi teléfono, email y canal preferido de recordatorio */
+        patch: operations["PacientesController_actualizarMisDatos"];
+        trace?: never;
+    };
     "/api/v1/pacientes/yo/indicaciones": {
         parameters: {
             query?: never;
@@ -409,23 +430,6 @@ export interface paths {
         options?: never;
         head?: never;
         patch?: never;
-        trace?: never;
-    };
-    "/api/v1/pacientes/yo": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        /** Actualiza mi teléfono, email y canal preferido de recordatorio */
-        patch: operations["PacientesController_actualizarMisDatos"];
         trace?: never;
     };
     "/api/v1/pacientes/{id}": {
@@ -863,11 +867,72 @@ export interface operations {
             };
         };
         responses: {
+            /** @description Sesión iniciada */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": {
+                        accessToken: string;
+                        refreshToken?: string;
+                        expiraEn: number;
+                    };
+                };
+            };
+            /** @description Error: NO_AUTENTICADO */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            /** @enum {string} */
+                            codigo: "NO_AUTENTICADO" | "SIN_PERMISO" | "NO_ENCONTRADO" | "VALIDACION" | "HORARIO_OCUPADO" | "TRANSICION_INVALIDA" | "MEDICO_AUSENTE" | "FUERA_DE_HORARIO" | "SIN_ENFERMERA_ASIGNADA" | "CONSULTA_CERRADA" | "DUPLICADO" | "TOKEN_INVALIDO" | "LIMITE_EXCEDIDO" | "ERROR_INTERNO";
+                            mensaje: string;
+                            detalles?: {
+                                [key: string]: unknown;
+                            };
+                        };
+                    };
+                };
+            };
+            /** @description Error: VALIDACION */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            /** @enum {string} */
+                            codigo: "NO_AUTENTICADO" | "SIN_PERMISO" | "NO_ENCONTRADO" | "VALIDACION" | "HORARIO_OCUPADO" | "TRANSICION_INVALIDA" | "MEDICO_AUSENTE" | "FUERA_DE_HORARIO" | "SIN_ENFERMERA_ASIGNADA" | "CONSULTA_CERRADA" | "DUPLICADO" | "TOKEN_INVALIDO" | "LIMITE_EXCEDIDO" | "ERROR_INTERNO";
+                            mensaje: string;
+                            detalles?: {
+                                [key: string]: unknown;
+                            };
+                        };
+                    };
+                };
+            };
+            /** @description Error: LIMITE_EXCEDIDO */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            /** @enum {string} */
+                            codigo: "NO_AUTENTICADO" | "SIN_PERMISO" | "NO_ENCONTRADO" | "VALIDACION" | "HORARIO_OCUPADO" | "TRANSICION_INVALIDA" | "MEDICO_AUSENTE" | "FUERA_DE_HORARIO" | "SIN_ENFERMERA_ASIGNADA" | "CONSULTA_CERRADA" | "DUPLICADO" | "TOKEN_INVALIDO" | "LIMITE_EXCEDIDO" | "ERROR_INTERNO";
+                            mensaje: string;
+                            detalles?: {
+                                [key: string]: unknown;
+                            };
+                        };
+                    };
+                };
             };
         };
     };
@@ -889,11 +954,54 @@ export interface operations {
             };
         };
         responses: {
+            /** @description Tokens renovados */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": {
+                        accessToken: string;
+                        refreshToken?: string;
+                        expiraEn: number;
+                    };
+                };
+            };
+            /** @description Error: NO_AUTENTICADO */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            /** @enum {string} */
+                            codigo: "NO_AUTENTICADO" | "SIN_PERMISO" | "NO_ENCONTRADO" | "VALIDACION" | "HORARIO_OCUPADO" | "TRANSICION_INVALIDA" | "MEDICO_AUSENTE" | "FUERA_DE_HORARIO" | "SIN_ENFERMERA_ASIGNADA" | "CONSULTA_CERRADA" | "DUPLICADO" | "TOKEN_INVALIDO" | "LIMITE_EXCEDIDO" | "ERROR_INTERNO";
+                            mensaje: string;
+                            detalles?: {
+                                [key: string]: unknown;
+                            };
+                        };
+                    };
+                };
+            };
+            /** @description Error: LIMITE_EXCEDIDO */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            /** @enum {string} */
+                            codigo: "NO_AUTENTICADO" | "SIN_PERMISO" | "NO_ENCONTRADO" | "VALIDACION" | "HORARIO_OCUPADO" | "TRANSICION_INVALIDA" | "MEDICO_AUSENTE" | "FUERA_DE_HORARIO" | "SIN_ENFERMERA_ASIGNADA" | "CONSULTA_CERRADA" | "DUPLICADO" | "TOKEN_INVALIDO" | "LIMITE_EXCEDIDO" | "ERROR_INTERNO";
+                            mensaje: string;
+                            detalles?: {
+                                [key: string]: unknown;
+                            };
+                        };
+                    };
+                };
             };
         };
     };
@@ -911,15 +1019,53 @@ export interface operations {
             content: {
                 "application/json": {
                     refreshToken?: string;
+                    dispositivoToken?: string;
                 };
             };
         };
         responses: {
+            /** @description Sesión cerrada */
             204: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Error: VALIDACION */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            /** @enum {string} */
+                            codigo: "NO_AUTENTICADO" | "SIN_PERMISO" | "NO_ENCONTRADO" | "VALIDACION" | "HORARIO_OCUPADO" | "TRANSICION_INVALIDA" | "MEDICO_AUSENTE" | "FUERA_DE_HORARIO" | "SIN_ENFERMERA_ASIGNADA" | "CONSULTA_CERRADA" | "DUPLICADO" | "TOKEN_INVALIDO" | "LIMITE_EXCEDIDO" | "ERROR_INTERNO";
+                            mensaje: string;
+                            detalles?: {
+                                [key: string]: unknown;
+                            };
+                        };
+                    };
+                };
+            };
+            /** @description Error: LIMITE_EXCEDIDO */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            /** @enum {string} */
+                            codigo: "NO_AUTENTICADO" | "SIN_PERMISO" | "NO_ENCONTRADO" | "VALIDACION" | "HORARIO_OCUPADO" | "TRANSICION_INVALIDA" | "MEDICO_AUSENTE" | "FUERA_DE_HORARIO" | "SIN_ENFERMERA_ASIGNADA" | "CONSULTA_CERRADA" | "DUPLICADO" | "TOKEN_INVALIDO" | "LIMITE_EXCEDIDO" | "ERROR_INTERNO";
+                            mensaje: string;
+                            detalles?: {
+                                [key: string]: unknown;
+                            };
+                        };
+                    };
+                };
             };
         };
     };
@@ -942,11 +1088,48 @@ export interface operations {
             };
         };
         responses: {
+            /** @description Solicitud recibida */
             204: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Error: VALIDACION */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            /** @enum {string} */
+                            codigo: "NO_AUTENTICADO" | "SIN_PERMISO" | "NO_ENCONTRADO" | "VALIDACION" | "HORARIO_OCUPADO" | "TRANSICION_INVALIDA" | "MEDICO_AUSENTE" | "FUERA_DE_HORARIO" | "SIN_ENFERMERA_ASIGNADA" | "CONSULTA_CERRADA" | "DUPLICADO" | "TOKEN_INVALIDO" | "LIMITE_EXCEDIDO" | "ERROR_INTERNO";
+                            mensaje: string;
+                            detalles?: {
+                                [key: string]: unknown;
+                            };
+                        };
+                    };
+                };
+            };
+            /** @description Error: LIMITE_EXCEDIDO */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            /** @enum {string} */
+                            codigo: "NO_AUTENTICADO" | "SIN_PERMISO" | "NO_ENCONTRADO" | "VALIDACION" | "HORARIO_OCUPADO" | "TRANSICION_INVALIDA" | "MEDICO_AUSENTE" | "FUERA_DE_HORARIO" | "SIN_ENFERMERA_ASIGNADA" | "CONSULTA_CERRADA" | "DUPLICADO" | "TOKEN_INVALIDO" | "LIMITE_EXCEDIDO" | "ERROR_INTERNO";
+                            mensaje: string;
+                            detalles?: {
+                                [key: string]: unknown;
+                            };
+                        };
+                    };
+                };
             };
         };
     };
@@ -969,11 +1152,66 @@ export interface operations {
             };
         };
         responses: {
+            /** @description Contraseña actualizada; se cierran todas las sesiones */
             204: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Error: TOKEN_INVALIDO */
+            410: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            /** @enum {string} */
+                            codigo: "NO_AUTENTICADO" | "SIN_PERMISO" | "NO_ENCONTRADO" | "VALIDACION" | "HORARIO_OCUPADO" | "TRANSICION_INVALIDA" | "MEDICO_AUSENTE" | "FUERA_DE_HORARIO" | "SIN_ENFERMERA_ASIGNADA" | "CONSULTA_CERRADA" | "DUPLICADO" | "TOKEN_INVALIDO" | "LIMITE_EXCEDIDO" | "ERROR_INTERNO";
+                            mensaje: string;
+                            detalles?: {
+                                [key: string]: unknown;
+                            };
+                        };
+                    };
+                };
+            };
+            /** @description Error: VALIDACION */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            /** @enum {string} */
+                            codigo: "NO_AUTENTICADO" | "SIN_PERMISO" | "NO_ENCONTRADO" | "VALIDACION" | "HORARIO_OCUPADO" | "TRANSICION_INVALIDA" | "MEDICO_AUSENTE" | "FUERA_DE_HORARIO" | "SIN_ENFERMERA_ASIGNADA" | "CONSULTA_CERRADA" | "DUPLICADO" | "TOKEN_INVALIDO" | "LIMITE_EXCEDIDO" | "ERROR_INTERNO";
+                            mensaje: string;
+                            detalles?: {
+                                [key: string]: unknown;
+                            };
+                        };
+                    };
+                };
+            };
+            /** @description Error: LIMITE_EXCEDIDO */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            /** @enum {string} */
+                            codigo: "NO_AUTENTICADO" | "SIN_PERMISO" | "NO_ENCONTRADO" | "VALIDACION" | "HORARIO_OCUPADO" | "TRANSICION_INVALIDA" | "MEDICO_AUSENTE" | "FUERA_DE_HORARIO" | "SIN_ENFERMERA_ASIGNADA" | "CONSULTA_CERRADA" | "DUPLICADO" | "TOKEN_INVALIDO" | "LIMITE_EXCEDIDO" | "ERROR_INTERNO";
+                            mensaje: string;
+                            detalles?: {
+                                [key: string]: unknown;
+                            };
+                        };
+                    };
+                };
             };
         };
     };
@@ -989,11 +1227,56 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
+            /** @description Usuario autenticado */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": {
+                        id: string;
+                        email: string;
+                        /** @enum {string} */
+                        rol: "PACIENTE" | "RECEPCION" | "ENFERMERA" | "MEDICO" | "ADMIN";
+                        clinica: {
+                            id: string;
+                            nombre: string;
+                            zonaHoraria: string;
+                            pais: string;
+                        };
+                        personal: {
+                            id: string;
+                            nombre: string;
+                            especialidad: string | null;
+                            consultorio: string | null;
+                        } | null;
+                        paciente: {
+                            id: string;
+                            nombres: string;
+                            apellidos: string;
+                            /** @enum {string|null} */
+                            canalPreferido: "EMAIL" | "SMS" | "WHATSAPP" | "PUSH" | null;
+                        } | null;
+                    };
+                };
+            };
+            /** @description Error: NO_AUTENTICADO */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            /** @enum {string} */
+                            codigo: "NO_AUTENTICADO" | "SIN_PERMISO" | "NO_ENCONTRADO" | "VALIDACION" | "HORARIO_OCUPADO" | "TRANSICION_INVALIDA" | "MEDICO_AUSENTE" | "FUERA_DE_HORARIO" | "SIN_ENFERMERA_ASIGNADA" | "CONSULTA_CERRADA" | "DUPLICADO" | "TOKEN_INVALIDO" | "LIMITE_EXCEDIDO" | "ERROR_INTERNO";
+                            mensaje: string;
+                            detalles?: {
+                                [key: string]: unknown;
+                            };
+                        };
+                    };
+                };
             };
         };
     };
@@ -1014,11 +1297,48 @@ export interface operations {
             };
         };
         responses: {
+            /** @description Dispositivo registrado o reasignado al usuario actual */
             204: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Error: NO_AUTENTICADO */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            /** @enum {string} */
+                            codigo: "NO_AUTENTICADO" | "SIN_PERMISO" | "NO_ENCONTRADO" | "VALIDACION" | "HORARIO_OCUPADO" | "TRANSICION_INVALIDA" | "MEDICO_AUSENTE" | "FUERA_DE_HORARIO" | "SIN_ENFERMERA_ASIGNADA" | "CONSULTA_CERRADA" | "DUPLICADO" | "TOKEN_INVALIDO" | "LIMITE_EXCEDIDO" | "ERROR_INTERNO";
+                            mensaje: string;
+                            detalles?: {
+                                [key: string]: unknown;
+                            };
+                        };
+                    };
+                };
+            };
+            /** @description Error: VALIDACION */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            /** @enum {string} */
+                            codigo: "NO_AUTENTICADO" | "SIN_PERMISO" | "NO_ENCONTRADO" | "VALIDACION" | "HORARIO_OCUPADO" | "TRANSICION_INVALIDA" | "MEDICO_AUSENTE" | "FUERA_DE_HORARIO" | "SIN_ENFERMERA_ASIGNADA" | "CONSULTA_CERRADA" | "DUPLICADO" | "TOKEN_INVALIDO" | "LIMITE_EXCEDIDO" | "ERROR_INTERNO";
+                            mensaje: string;
+                            detalles?: {
+                                [key: string]: unknown;
+                            };
+                        };
+                    };
+                };
             };
         };
     };
@@ -1033,11 +1353,30 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
+            /** @description Dispositivo eliminado */
             204: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Error: NO_AUTENTICADO */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            /** @enum {string} */
+                            codigo: "NO_AUTENTICADO" | "SIN_PERMISO" | "NO_ENCONTRADO" | "VALIDACION" | "HORARIO_OCUPADO" | "TRANSICION_INVALIDA" | "MEDICO_AUSENTE" | "FUERA_DE_HORARIO" | "SIN_ENFERMERA_ASIGNADA" | "CONSULTA_CERRADA" | "DUPLICADO" | "TOKEN_INVALIDO" | "LIMITE_EXCEDIDO" | "ERROR_INTERNO";
+                            mensaje: string;
+                            detalles?: {
+                                [key: string]: unknown;
+                            };
+                        };
+                    };
+                };
             };
         };
     };
@@ -1510,7 +1849,7 @@ export interface operations {
             };
         };
     };
-    PacientesController_misIndicaciones: {
+    PacientesController_miPerfil: {
         parameters: {
             query?: never;
             header?: never;
@@ -1519,11 +1858,66 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
+            /** @description Datos del paciente autenticado */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": {
+                        id: string;
+                        nombres: string;
+                        apellidos: string;
+                        documento: string;
+                        fechaNacimiento: string;
+                        telefono: string | null;
+                        email: string | null;
+                        alergias: string | null;
+                        antecedentes: string | null;
+                        seguro: string | null;
+                        /** @enum {string|null} */
+                        canalPreferido: "EMAIL" | "SMS" | "WHATSAPP" | "PUSH" | null;
+                        tieneAccesoPortal: boolean;
+                        /** Format: date-time */
+                        consentimientoEn: string;
+                    };
+                };
+            };
+            /** @description Error: NO_AUTENTICADO */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            /** @enum {string} */
+                            codigo: "NO_AUTENTICADO" | "SIN_PERMISO" | "NO_ENCONTRADO" | "VALIDACION" | "HORARIO_OCUPADO" | "TRANSICION_INVALIDA" | "MEDICO_AUSENTE" | "FUERA_DE_HORARIO" | "SIN_ENFERMERA_ASIGNADA" | "CONSULTA_CERRADA" | "DUPLICADO" | "TOKEN_INVALIDO" | "LIMITE_EXCEDIDO" | "ERROR_INTERNO";
+                            mensaje: string;
+                            detalles?: {
+                                [key: string]: unknown;
+                            };
+                        };
+                    };
+                };
+            };
+            /** @description Error: SIN_PERMISO */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            /** @enum {string} */
+                            codigo: "NO_AUTENTICADO" | "SIN_PERMISO" | "NO_ENCONTRADO" | "VALIDACION" | "HORARIO_OCUPADO" | "TRANSICION_INVALIDA" | "MEDICO_AUSENTE" | "FUERA_DE_HORARIO" | "SIN_ENFERMERA_ASIGNADA" | "CONSULTA_CERRADA" | "DUPLICADO" | "TOKEN_INVALIDO" | "LIMITE_EXCEDIDO" | "ERROR_INTERNO";
+                            mensaje: string;
+                            detalles?: {
+                                [key: string]: unknown;
+                            };
+                        };
+                    };
+                };
             };
         };
     };
@@ -1546,11 +1940,147 @@ export interface operations {
             };
         };
         responses: {
+            /** @description Datos actualizados */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": {
+                        id: string;
+                        nombres: string;
+                        apellidos: string;
+                        documento: string;
+                        fechaNacimiento: string;
+                        telefono: string | null;
+                        email: string | null;
+                        alergias: string | null;
+                        antecedentes: string | null;
+                        seguro: string | null;
+                        /** @enum {string|null} */
+                        canalPreferido: "EMAIL" | "SMS" | "WHATSAPP" | "PUSH" | null;
+                        tieneAccesoPortal: boolean;
+                        /** Format: date-time */
+                        consentimientoEn: string;
+                    };
+                };
+            };
+            /** @description Error: NO_AUTENTICADO */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            /** @enum {string} */
+                            codigo: "NO_AUTENTICADO" | "SIN_PERMISO" | "NO_ENCONTRADO" | "VALIDACION" | "HORARIO_OCUPADO" | "TRANSICION_INVALIDA" | "MEDICO_AUSENTE" | "FUERA_DE_HORARIO" | "SIN_ENFERMERA_ASIGNADA" | "CONSULTA_CERRADA" | "DUPLICADO" | "TOKEN_INVALIDO" | "LIMITE_EXCEDIDO" | "ERROR_INTERNO";
+                            mensaje: string;
+                            detalles?: {
+                                [key: string]: unknown;
+                            };
+                        };
+                    };
+                };
+            };
+            /** @description Error: SIN_PERMISO */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            /** @enum {string} */
+                            codigo: "NO_AUTENTICADO" | "SIN_PERMISO" | "NO_ENCONTRADO" | "VALIDACION" | "HORARIO_OCUPADO" | "TRANSICION_INVALIDA" | "MEDICO_AUSENTE" | "FUERA_DE_HORARIO" | "SIN_ENFERMERA_ASIGNADA" | "CONSULTA_CERRADA" | "DUPLICADO" | "TOKEN_INVALIDO" | "LIMITE_EXCEDIDO" | "ERROR_INTERNO";
+                            mensaje: string;
+                            detalles?: {
+                                [key: string]: unknown;
+                            };
+                        };
+                    };
+                };
+            };
+            /** @description Error: VALIDACION */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            /** @enum {string} */
+                            codigo: "NO_AUTENTICADO" | "SIN_PERMISO" | "NO_ENCONTRADO" | "VALIDACION" | "HORARIO_OCUPADO" | "TRANSICION_INVALIDA" | "MEDICO_AUSENTE" | "FUERA_DE_HORARIO" | "SIN_ENFERMERA_ASIGNADA" | "CONSULTA_CERRADA" | "DUPLICADO" | "TOKEN_INVALIDO" | "LIMITE_EXCEDIDO" | "ERROR_INTERNO";
+                            mensaje: string;
+                            detalles?: {
+                                [key: string]: unknown;
+                            };
+                        };
+                    };
+                };
+            };
+        };
+    };
+    PacientesController_misIndicaciones: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Indicaciones, de la más reciente a la más antigua */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        citaId: string;
+                        /** Format: date-time */
+                        fecha: string;
+                        medico: string;
+                        especialidad: string | null;
+                        indicaciones: string | null;
+                    }[];
+                };
+            };
+            /** @description Error: NO_AUTENTICADO */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            /** @enum {string} */
+                            codigo: "NO_AUTENTICADO" | "SIN_PERMISO" | "NO_ENCONTRADO" | "VALIDACION" | "HORARIO_OCUPADO" | "TRANSICION_INVALIDA" | "MEDICO_AUSENTE" | "FUERA_DE_HORARIO" | "SIN_ENFERMERA_ASIGNADA" | "CONSULTA_CERRADA" | "DUPLICADO" | "TOKEN_INVALIDO" | "LIMITE_EXCEDIDO" | "ERROR_INTERNO";
+                            mensaje: string;
+                            detalles?: {
+                                [key: string]: unknown;
+                            };
+                        };
+                    };
+                };
+            };
+            /** @description Error: SIN_PERMISO */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            /** @enum {string} */
+                            codigo: "NO_AUTENTICADO" | "SIN_PERMISO" | "NO_ENCONTRADO" | "VALIDACION" | "HORARIO_OCUPADO" | "TRANSICION_INVALIDA" | "MEDICO_AUSENTE" | "FUERA_DE_HORARIO" | "SIN_ENFERMERA_ASIGNADA" | "CONSULTA_CERRADA" | "DUPLICADO" | "TOKEN_INVALIDO" | "LIMITE_EXCEDIDO" | "ERROR_INTERNO";
+                            mensaje: string;
+                            detalles?: {
+                                [key: string]: unknown;
+                            };
+                        };
+                    };
+                };
             };
         };
     };

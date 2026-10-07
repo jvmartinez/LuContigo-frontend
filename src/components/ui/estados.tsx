@@ -62,11 +62,13 @@ export function ErrorEstado({
   error,
   titulo = 'No pudimos cargar esta información',
   reintentar,
+  reintentando = false,
   className,
 }: {
   error: unknown;
   titulo?: string;
   reintentar?: () => void;
+  reintentando?: boolean;
   className?: string;
 }) {
   return (
@@ -81,8 +83,14 @@ export function ErrorEstado({
       <p className="font-semibold">{titulo}</p>
       <p className="max-w-md text-sm">{mensajeDeError(error)}</p>
       {reintentar && (
-        <Button variante="secundario" className="mt-2" onClick={reintentar}>
-          <RotateCw aria-hidden /> Reintentar
+        <Button variante="secundario" className="mt-2" cargando={reintentando} onClick={reintentar}>
+          {reintentando ? (
+            'Reintentando…'
+          ) : (
+            <>
+              <RotateCw aria-hidden /> Reintentar
+            </>
+          )}
         </Button>
       )}
     </div>

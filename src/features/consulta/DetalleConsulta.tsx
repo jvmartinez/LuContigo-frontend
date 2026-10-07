@@ -139,7 +139,14 @@ export function DetalleConsulta({ cita, zona }: { cita: Cita; zona: string }) {
         </CardHeader>
         <CardContent>
           {historial.isPending ? (
-            <Esqueleto className="h-24" />
+            <Cargando texto="Cargando signos vitales…" className="py-4" />
+          ) : historial.isError ? (
+            <ErrorEstado
+              error={historial.error}
+              titulo="No pudimos cargar los signos de esta cita"
+              reintentar={() => void historial.refetch()}
+              reintentando={historial.isFetching}
+            />
           ) : signosHoy ? (
             <SignosVitales signos={signosHoy} edad={edad} />
           ) : (
